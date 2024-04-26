@@ -27,7 +27,7 @@
   <div id="gameBoard"></div>
 
   <script>
-    const socket = io("https://woolly-stripe-grenadilla.glitch.me");
+    const socket = io();
     const gameBoard = document.getElementById('gameBoard');
     const usernameDisplay = document.getElementById('usernameDisplay');
 
@@ -41,7 +41,18 @@
       username = prompt('Enter your username:');
       if (username) {
         usernameDisplay.textContent = username;
-        socket.emit('setUsername', username);
+        setSymbol();
+      }
+    }
+
+    // Funzione per scegliere il simbolo del giocatore
+    function setSymbol() {
+      const symbol = prompt('Choose your symbol (X or O):').toUpperCase();
+      if (symbol !== 'X' && symbol !== 'O') {
+        alert('Invalid symbol. Please choose X or O.');
+        setSymbol();
+      } else {
+        socket.emit('setUsernameAndSymbol', { username, symbol });
       }
     }
 
@@ -99,10 +110,14 @@
     };
 
     // Ricevi un messaggio quando la partita inizia
-    socket.on('gameStart', ({ gameId: id, username: opponentUsername, symbol }) => {
+    socket.on('gameStart', ({ gameId: id, role, symbol }) => {
       gameId = id;
-      currentPlayer = symbol;
-      alert(`Game started! You are playing as ${symbol}. Your opponent is ${opponentUsername}.`);
+      if (role === 'player1') {
+        currentPlayer = symbol;
+      } else {
+        currentPlayer = symbol;
+      }
+      alert(`Game started! You are playing as ${symbol}.`);
       createGameBoard();
     });
 
@@ -113,6 +128,17 @@
     socket.on('updateBoard', ({ board, currentPlayer }) => {
       updateGameBoard(board);
       currentPlayer = currentPlayer;
+    });
+
+    // Gestisci la modalità spettatore
+    socket.on('spectator', (message) => {
+      alert(message);
+    });
+
+    // Gestisci la notifica di simbolo non disponibile
+    socket.on('symbolUnavailable', (symbol) => {
+      alert(`The symbol ${symbol} is already chosen by another player. Please choose a different symbol.`);
+      setSymbol();
     });
   </script>
 </body>

@@ -8,22 +8,8 @@ const io = socketio(server);
 
 const PORT = process.env.PORT || 3000;
 
-let games = {};
-let waitingPlayer = null;
-
-// Funzione per creare un nuovo gioco
-function createGame(player1, player2) {
-  const gameId = `${player1.id}-${player2.id}`;
-  games[gameId] = {
-    player1,
-    player2,
-    board: Array(3).fill('').map(() => Array(3).fill('')),
-    currentPlayer: player1,
-    gameOver: false,
-    winner: null
-  };
-  return gameId;
-}
+let game = null; // Variabile per gestire una partita attiva
+let spectators = []; // Lista di spettatori
 
 // Funzione per controllare se c'è un vincitore
 function checkWinner(board) {
@@ -50,24 +36,8 @@ function checkWinner(board) {
   return null;
 }
 
-// Funzione per inviare gli aggiornamenti del gioco
-function updateGame(gameId) {
-  const game = games[gameId];
-  if (game) {
-    const { board, currentPlayer } = game;
-    const opponentPlayer = currentPlayer === game.player1 ? game.player2 : game.player1;
-
-    io.to(gameId).emit('updateBoard', {
-      board,
-      currentPlayer: currentPlayer.username,
-      opponentPlayer: opponentPlayer.username
-    });
-  }
-}
-
 // Funzione per resettare il gioco
-function resetGame(gameId) {
-  const game = games[gameId];
+function resetGame() {
   if (game) {
     game.board = Array(3).fill('').map(() => Array(3).fill(''));
     game.currentPlayer = game.player1;
@@ -76,55 +46,114 @@ function resetGame(gameId) {
   }
 }
 
+// Funzione per inviare aggiornamenti del gioco ai partecipanti e spettatori
+function updateGame() {
+  if (game) {
+    const { board, currentPlayer, player1, player2 } = game;
+    io.to(player1.id).emit('updateBoard', { board, currentPlayer: currentPlayer.username });
+    io.to(player2.id).emit('updateBoard', { board, currentPlayer: currentPlayer.username });
+    // Invia aggiornamenti agli spettatori
+    spectators.forEach(spectatorId => {
+      io.to(spectatorId).emit('updateBoard', { board, currentPlayer: currentPlayer.username });
+    });
+  }
+}
+
 // Gestione delle connessioni dei client
 io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
 
-  // Ricevi il nome utente del giocatore
-  socket.on('setUsername', (username) => {
+  // Ricevi il nome utente e il simbolo del giocatore
+  socket.on('setUsernameAndSymbol', ({ username, symbol }) => {
     socket.username = username;
-    console.log(`User ${socket.id} set username as ${username}`);
+    socket.symbol = symbol;
 
-    // Se c'è un giocatore in attesa, crea un nuovo gioco
-    if (waitingPlayer) {
-      const gameId = createGame(waitingPlayer, socket);
-      waitingPlayer.gameId = gameId;
-      socket.gameId = gameId;
-      io.to(waitingPlayer.id).emit('gameStart', { gameId, username: socket.username, symbol: 'O' });
-      io.to(socket.id).emit('gameStart', { gameId, username: waitingPlayer.username, symbol: 'X' });
-      waitingPlayer = null;
+    console.log(`User ${socket.id} set username as ${username} and symbol as ${symbol}`);
+
+    // Se non c'è una partita attiva, inizia una nuova partita con il giocatore
+    if (!game) {
+      game = {
+        player1: socket,
+        player2: null,
+        board: Array(3).fill('').map(() => Array(3).fill('')),
+        currentPlayer: socket,
+        gameOver: false,
+        winner: null
+      };
+      // Invia messaggio al giocatore per informarlo che è il primo giocatore
+      socket.emit('gameStart', {
+        gameId: socket.id,
+        role: 'player1',
+        symbol: socket.symbol
+      });
+    } else if (!game.player2) {
+      // Se c'è una partita in corso ma manca un secondo giocatore, unisciti alla partita
+      if (symbol !== game.player1.symbol) {
+        game.player2 = socket;
+        game.currentPlayer = game.player1;
+
+        // Invia messaggi ai giocatori per informarli che la partita è iniziata
+        io.to(game.player1.id).emit('gameStart', {
+          gameId: socket.id,
+          role: 'player1',
+          opponentUsername: socket.username,
+          opponentSymbol: socket.symbol
+        });
+
+        io.to(game.player2.id).emit('gameStart', {
+          gameId: socket.id,
+          role: 'player2',
+          opponentUsername: game.player1.username,
+          opponentSymbol: game.player1.symbol
+        });
+
+        // Aggiorna la partita e invia notifiche
+        updateGame();
+      } else {
+        // Simbolo già scelto dall'altro giocatore
+        socket.emit('symbolUnavailable', game.player1.symbol);
+      }
     } else {
-      // Se non c'è nessun giocatore in attesa, metti il giocatore in attesa
-      waitingPlayer = socket;
+      // Giocatori pieni, il nuovo client diventa spettatore
+      spectators.push(socket.id);
+      socket.emit('spectator', 'You are now a spectator. Please wait for the current game to end.');
     }
   });
 
   // Ricevi la mossa del giocatore
-  socket.on('makeMove', ({ gameId, row, col }) => {
-    const game = games[gameId];
-
+  socket.on('makeMove', ({ row, col }) => {
     // Verifica che la mossa sia valida
     if (game && game.currentPlayer.id === socket.id && !game.gameOver) {
       if (game.board[row][col] === '') {
         // Aggiorna il tabellone di gioco
-        const symbol = game.currentPlayer === game.player1 ? 'X' : 'O';
+        const symbol = game.currentPlayer.symbol;
         game.board[row][col] = symbol;
 
         const winner = checkWinner(game.board);
         if (winner) {
           game.gameOver = true;
           game.winner = game.currentPlayer.username;
-          io.to(gameId).emit('gameOver', { winner: game.winner });
-          resetGame(gameId);
+          // Invia notifiche di vittoria
+          io.to(game.player1.id).emit('gameOver', { winner: game.winner });
+          io.to(game.player2.id).emit('gameOver', { winner: game.winner });
+          spectators.forEach(spectatorId => {
+            io.to(spectatorId).emit('gameOver', { winner: game.winner });
+          });
+          resetGame();
         } else if (game.board.flat().every(cell => cell !== '')) {
           // Controlla se la partita è finita in parità
           game.gameOver = true;
-          io.to(gameId).emit('gameOver', { winner: 'draw' });
-          resetGame(gameId);
+          // Invia notifiche di parità
+          io.to(game.player1.id).emit('gameOver', { winner: 'draw' });
+          io.to(game.player2.id).emit('gameOver', { winner: 'draw' });
+          spectators.forEach(spectatorId => {
+            io.to(spectatorId).emit('gameOver', { winner: 'draw' });
+          });
+          resetGame();
         } else {
           // Cambia il giocatore corrente
           game.currentPlayer = game.currentPlayer === game.player1 ? game.player2 : game.player1;
-          updateGame(gameId);
+          updateGame();
         }
       }
     }
@@ -133,15 +162,15 @@ io.on('connection', (socket) => {
   // Disconnessione di un client
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
-    if (waitingPlayer && waitingPlayer.id === socket.id) {
-      waitingPlayer = null;
+    // Rimuovi il giocatore dagli spettatori
+    const spectatorIndex = spectators.indexOf(socket.id);
+    if (spectatorIndex !== -1) {
+      spectators.splice(spectatorIndex, 1);
     } else {
-      for (const gameId in games) {
-        const game = games[gameId];
-        if (game && (game.player1.id === socket.id || game.player2.id === socket.id)) {
-          delete games[gameId];
-          io.to(gameId).emit('gameAborted');
-        }
+      // Controlla se il client era un giocatore
+      if (game && (game.player1.id === socket.id || game.player2.id === socket.id)) {
+        delete game;
+        io.to(game.id).emit('gameAborted');
       }
     }
   });
@@ -151,6 +180,7 @@ io.on('connection', (socket) => {
 app.get('/', function (req, res) {
     res.sendFile(__dirname + '/public/client.html');
 });
+
 // Configurazione delle route per il server
 app.use(express.static('public'));
 
