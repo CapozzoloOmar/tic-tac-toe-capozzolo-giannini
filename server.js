@@ -1,119 +1,155 @@
-/**
- * This is the main Node.js server script for your project
- * Check out the two endpoints this back-end API provides in fastify.get and fastify.post below
- */
+const express = require('express');
+const http = require('http');
+const socketio = require('socket.io');
 
-const path = require("path");
+const app = express();
+const server = http.createServer(app);
+const io = socketio(server);
 
-// Require the fastify framework and instantiate it
-const fastify = require("fastify")({
-  // Set this to true for detailed logging:
-  logger: false,
-});
+const PORT = process.env.PORT || 3000;
 
-// ADD FAVORITES ARRAY VARIABLE FROM TODO HERE
+let games = {};
+let waitingPlayer = null;
 
-// Setup our static files
-fastify.register(require("@fastify/static"), {
-  root: path.join(__dirname, "public"),
-  prefix: "/", // optional: default '/'
-});
-
-// Formbody lets us parse incoming forms
-fastify.register(require("@fastify/formbody"));
-
-// View is a templating manager for fastify
-fastify.register(require("@fastify/view"), {
-  engine: {
-    handlebars: require("handlebars"),
-  },
-});
-
-// Load and parse SEO data
-const seo = require("./src/seo.json");
-if (seo.url === "glitch-default") {
-  seo.url = `https://${process.env.PROJECT_DOMAIN}.glitch.me`;
+// Funzione per creare un nuovo gioco
+function createGame(player1, player2) {
+  const gameId = `${player1.id}-${player2.id}`;
+  games[gameId] = {
+    player1,
+    player2,
+    board: Array(3).fill('').map(() => Array(3).fill('')),
+    currentPlayer: player1,
+    gameOver: false,
+    winner: null
+  };
+  return gameId;
 }
 
-/**
- * Our home page route
- *
- * Returns src/pages/index.hbs with data built into it
- */
-fastify.get("/", function (request, reply) {
-  // params is an object we'll pass to our handlebars template
-  let params = { seo: seo };
+// Funzione per controllare se c'è un vincitore
+function checkWinner(board) {
+  const winningCombinations = [
+    // Righe
+    [[0, 0], [0, 1], [0, 2]],
+    [[1, 0], [1, 1], [1, 2]],
+    [[2, 0], [2, 1], [2, 2]],
+    // Colonne
+    [[0, 0], [1, 0], [2, 0]],
+    [[0, 1], [1, 1], [2, 1]],
+    [[0, 2], [1, 2], [2, 2]],
+    // Diagonali
+    [[0, 0], [1, 1], [2, 2]],
+    [[0, 2], [1, 1], [2, 0]]
+  ];
 
-  // If someone clicked the option for a random color it'll be passed in the querystring
-  if (request.query.randomize) {
-    // We need to load our color data file, pick one at random, and add it to the params
-    const colors = require("./src/colors.json");
-    const allColors = Object.keys(colors);
-    let currentColor = allColors[(allColors.length * Math.random()) << 0];
-
-    // Add the color properties to the params object
-    params = {
-      color: colors[currentColor],
-      colorError: null,
-      seo: seo,
-    };
+  for (const combination of winningCombinations) {
+    const [a, b, c] = combination;
+    if (board[a[0]][a[1]] && board[a[0]][a[1]] === board[b[0]][b[1]] && board[a[0]][a[1]] === board[c[0]][c[1]]) {
+      return board[a[0]][a[1]];
+    }
   }
+  return null;
+}
 
-  // The Handlebars code will be able to access the parameter values and build them into the page
-  return reply.view("/src/pages/index.hbs", params);
-});
+// Funzione per inviare gli aggiornamenti del gioco
+function updateGame(gameId) {
+  const game = games[gameId];
+  if (game) {
+    const { board, currentPlayer } = game;
+    const opponentPlayer = currentPlayer === game.player1 ? game.player2 : game.player1;
 
-/**
- * Our POST route to handle and react to form submissions
- *
- * Accepts body data indicating the user choice
- */
-fastify.post("/", function (request, reply) {
-  // Build the params object to pass to the template
-  let params = { seo: seo };
+    io.to(gameId).emit('updateBoard', {
+      board,
+      currentPlayer: currentPlayer.username,
+      opponentPlayer: opponentPlayer.username
+    });
+  }
+}
 
-  // If the user submitted a color through the form it'll be passed here in the request body
-  let color = request.body.color;
+// Funzione per resettare il gioco
+function resetGame(gameId) {
+  const game = games[gameId];
+  if (game) {
+    game.board = Array(3).fill('').map(() => Array(3).fill(''));
+    game.currentPlayer = game.player1;
+    game.gameOver = false;
+    game.winner = null;
+  }
+}
 
-  // If it's not empty, let's try to find the color
-  if (color) {
-    // ADD CODE FROM TODO HERE TO SAVE SUBMITTED FAVORITES
+// Gestione delle connessioni dei client
+io.on('connection', (socket) => {
+  console.log('New client connected:', socket.id);
 
-    // Load our color data file
-    const colors = require("./src/colors.json");
+  // Ricevi il nome utente del giocatore
+  socket.on('setUsername', (username) => {
+    socket.username = username;
+    console.log(`User ${socket.id} set username as ${username}`);
 
-    // Take our form submission, remove whitespace, and convert to lowercase
-    color = color.toLowerCase().replace(/\s/g, "");
-
-    // Now we see if that color is a key in our colors object
-    if (colors[color]) {
-      // Found one!
-      params = {
-        color: colors[color],
-        colorError: null,
-        seo: seo,
-      };
+    // Se c'è un giocatore in attesa, crea un nuovo gioco
+    if (waitingPlayer) {
+      const gameId = createGame(waitingPlayer, socket);
+      waitingPlayer.gameId = gameId;
+      socket.gameId = gameId;
+      io.to(waitingPlayer.id).emit('gameStart', { gameId, username: socket.username, symbol: 'O' });
+      io.to(socket.id).emit('gameStart', { gameId, username: waitingPlayer.username, symbol: 'X' });
+      waitingPlayer = null;
     } else {
-      // No luck! Return the user value as the error property
-      params = {
-        colorError: request.body.color,
-        seo: seo,
-      };
+      // Se non c'è nessun giocatore in attesa, metti il giocatore in attesa
+      waitingPlayer = socket;
     }
-  }
+  });
 
-  // The Handlebars template will use the parameter values to update the page with the chosen color
-  return reply.view("/src/pages/index.hbs", params);
+  // Ricevi la mossa del giocatore
+  socket.on('makeMove', ({ gameId, row, col }) => {
+    const game = games[gameId];
+
+    // Verifica che la mossa sia valida
+    if (game && game.currentPlayer.id === socket.id && !game.gameOver) {
+      if (game.board[row][col] === '') {
+        // Aggiorna il tabellone di gioco
+        const symbol = game.currentPlayer === game.player1 ? 'X' : 'O';
+        game.board[row][col] = symbol;
+
+        const winner = checkWinner(game.board);
+        if (winner) {
+          game.gameOver = true;
+          game.winner = game.currentPlayer.username;
+          io.to(gameId).emit('gameOver', { winner: game.winner });
+          resetGame(gameId);
+        } else if (game.board.flat().every(cell => cell !== '')) {
+          // Controlla se la partita è finita in parità
+          game.gameOver = true;
+          io.to(gameId).emit('gameOver', { winner: 'draw' });
+          resetGame(gameId);
+        } else {
+          // Cambia il giocatore corrente
+          game.currentPlayer = game.currentPlayer === game.player1 ? game.player2 : game.player1;
+          updateGame(gameId);
+        }
+      }
+    }
+  });
+
+  // Disconnessione di un client
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id);
+    if (waitingPlayer && waitingPlayer.id === socket.id) {
+      waitingPlayer = null;
+    } else {
+      for (const gameId in games) {
+        const game = games[gameId];
+        if (game && (game.player1.id === socket.id || game.player2.id === socket.id)) {
+          delete games[gameId];
+          io.to(gameId).emit('gameAborted');
+        }
+      }
+    }
+  });
 });
 
-// Run the server and report out to the logs
-fastify.listen(
-  { port: process.env.PORT, host: "0.0.0.0" },
-  function (err, address) {
-    if (err) {
-      console.error(err);
-      process.exit(1);
-    }
-    console.log(`Your app is listening on ${address}`);
-  }
-);
+// Configurazione delle route per il server
+app.use(express.static('public'));
+
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});

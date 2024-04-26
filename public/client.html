@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Tic-Tac-Toe</title>
+  <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"></script>
+  <style>
+    /* Stili CSS */
+    #gameBoard {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-template-rows: repeat(3, 100px);
+    }
+    #gameBoard div {
+      border: 1px solid black;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 2rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>Tic-Tac-Toe</h1>
+  <p>Username: <span id="usernameDisplay"></span></p>
+  <div id="gameBoard"></div>
+
+  <script>
+    const socket = io();
+    const gameBoard = document.getElementById('gameBoard');
+    const usernameDisplay = document.getElementById('usernameDisplay');
+
+    let username;
+    let currentPlayer;
+    let board = Array(3).fill('').map(() => Array(3).fill(''));
+    let gameId;
+
+    // Funzione per impostare l'username
+    function setUsername() {
+      username = prompt('Enter your username:');
+      if (username) {
+        usernameDisplay.textContent = username;
+        socket.emit('setUsername', username);
+      }
+    }
+
+    // Funzione per creare il tabellone di gioco
+    function createGameBoard() {
+      gameBoard.innerHTML = '';
+      for (let row = 0; row < 3; row++) {
+        for (let col = 0; col < 3; col++) {
+          const cell = document.createElement('div');
+          cell.setAttribute('data-row', row);
+          cell.setAttribute('data-col', col);
+          cell.addEventListener('click', handleCellClick);
+          gameBoard.appendChild(cell);
+        }
+      }
+    }
+
+    // Funzione per gestire il click su una cella
+    function handleCellClick(e) {
+      const row = parseInt(e.target.getAttribute('data-row'));
+      const col = parseInt(e.target.getAttribute('data-col'));
+      if (board[row][col] === '' && currentPlayer === username) {
+        socket.emit('makeMove', { gameId, row, col });
+      }
+    }
+
+    // Funzione per aggiornare il tabellone di gioco
+    function updateGameBoard(board) {
+      gameBoard.innerHTML = '';
+      for (let row = 0; row < 3; row++) {
+        for (let col = 0; col < 3; col++) {
+          const cell = document.createElement('div');
+          cell.textContent = board[row][col];
+          cell.setAttribute('data-row', row);
+          cell.setAttribute('data-col', col);
+          cell.addEventListener('click', handleCellClick);
+          gameBoard.appendChild(cell);
+        }
+      }
+    }
+
+    // Funzione per gestire la fine della partita
+    function handleGameOver(result) {
+      if (result.winner === 'draw') {
+        alert('It\'s a draw!');
+      } else {
+        alert(`${result.winner} wins!`);
+      }
+      createGameBoard();
+    }
+
+    // Imposta l'username quando la pagina si carica
+    window.onload = () => {
+      setUsername();
+    };
+
+    // Ricevi un messaggio quando la partita inizia
+    socket.on('gameStart', ({ gameId: id, username: opponentUsername, symbol }) => {
+      gameId = id;
+      currentPlayer = symbol;
+      alert(`Game started! You are playing as ${symbol}. Your opponent is ${opponentUsername}.`);
+      createGameBoard();
+    });
+
+    // Ricevi una notifica che il gioco è finito
+    socket.on('gameOver', handleGameOver);
+
+    // Ricevi una notifica del tabellone aggiornato
+    socket.on('updateBoard', ({ board, currentPlayer }) => {
+      updateGameBoard(board);
+      currentPlayer = currentPlayer;
+    });
+  </script>
+</body>
+</html>
