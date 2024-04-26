@@ -73,6 +73,13 @@
     function handleCellClick(e) {
       const row = parseInt(e.target.getAttribute('data-row'));
       const col = parseInt(e.target.getAttribute('data-col'));
+
+      // Verifica se è il turno dell'utente
+      if (currentPlayer !== username) {
+        alert('It\'s not your turn or you need to wait for an opponent to join the game.');
+        return;
+      }
+
       // Invio delle coordinate della cella cliccata al server
       socket.emit('makeMove', { gameId, row, col });
     }
@@ -88,34 +95,36 @@
     }
 
     // Gestisci la fine della partita
-    function handleGameOver(result) {
+    function handleGameEnd(result) {
       if (result.winner === 'draw') {
         alert('It\'s a draw!');
       } else {
         alert(`${result.winner} wins!`);
       }
-      createGameBoard();
+      alert('The game has ended. Please log in again to start a new game.');
+      // Richiedi un nuovo login
+      setUsername();
     }
 
     // Imposta l'username all'avvio della pagina
     window.onload = setUsername;
 
     // Ricevi l'inizio della partita
-    socket.on('gameStart', ({ gameId: id, role, symbol }) => {
+    socket.on('gameStart', ({ gameId: id, role, symbol, currentPlayer }) => {
       gameId = id;
-      currentPlayer = symbol;
-      alert(`Game started! You are playing as ${symbol}.`);
+      currentPlayer = currentPlayer;
+      alert(`Game started! You are playing as ${symbol}. Current player: ${currentPlayer}.`);
       createGameBoard();
     });
 
-    // Ricevi la fine della partita
-    socket.on('gameOver', handleGameOver);
-
-    // Ricevi aggiornamenti del tabellone
-    socket.on('updateBoard', ({ board, currentPlayer: current }) => {
+    // Ricevi l'evento `updateBoard` per aggiornare la tabella di gioco
+    socket.on('updateBoard', ({ board, currentPlayer }) => {
       updateGameBoard(board);
-      currentPlayer = current;
+      alert(`It's ${currentPlayer}'s turn!`);
     });
+
+    // Gestisci la fine della partita
+    socket.on('gameEnd', handleGameEnd);
   </script>
 </body>
 </html>
