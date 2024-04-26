@@ -27,36 +27,35 @@
   <div id="gameBoard"></div>
 
   <script>
-    const socket = io();
+    const socket = io("https://woolly-stripe-grenadilla.glitch.me");
     const gameBoard = document.getElementById('gameBoard');
     const usernameDisplay = document.getElementById('usernameDisplay');
 
     let username;
     let currentPlayer;
-    let board = Array(3).fill('').map(() => Array(3).fill(''));
     let gameId;
 
-    // Funzione per impostare l'username
+    // Imposta l'username e il simbolo
     function setUsername() {
       username = prompt('Enter your username:');
       if (username) {
         usernameDisplay.textContent = username;
-        setSymbol();
+        chooseSymbol();
       }
     }
 
-    // Funzione per scegliere il simbolo del giocatore
-    function setSymbol() {
+    // Permette all'utente di scegliere il simbolo
+    function chooseSymbol() {
       const symbol = prompt('Choose your symbol (X or O):').toUpperCase();
-      if (symbol !== 'X' && symbol !== 'O') {
-        alert('Invalid symbol. Please choose X or O.');
-        setSymbol();
-      } else {
+      if (symbol === 'X' || symbol === 'O') {
         socket.emit('setUsernameAndSymbol', { username, symbol });
+      } else {
+        alert('Invalid symbol! Choose either X or O.');
+        chooseSymbol();
       }
     }
 
-    // Funzione per creare il tabellone di gioco
+    // Crea il tabellone di gioco
     function createGameBoard() {
       gameBoard.innerHTML = '';
       for (let row = 0; row < 3; row++) {
@@ -70,31 +69,25 @@
       }
     }
 
-    // Funzione per gestire il click su una cella
+    // Gestisci il click su una cella
     function handleCellClick(e) {
       const row = parseInt(e.target.getAttribute('data-row'));
       const col = parseInt(e.target.getAttribute('data-col'));
-      if (board[row][col] === '' && currentPlayer === username) {
-        socket.emit('makeMove', { gameId, row, col });
-      }
+      // Invio delle coordinate della cella cliccata al server
+      socket.emit('makeMove', { gameId, row, col });
     }
 
-    // Funzione per aggiornare il tabellone di gioco
+    // Aggiorna il tabellone di gioco
     function updateGameBoard(board) {
-      gameBoard.innerHTML = '';
       for (let row = 0; row < 3; row++) {
         for (let col = 0; col < 3; col++) {
-          const cell = document.createElement('div');
+          const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
           cell.textContent = board[row][col];
-          cell.setAttribute('data-row', row);
-          cell.setAttribute('data-col', col);
-          cell.addEventListener('click', handleCellClick);
-          gameBoard.appendChild(cell);
         }
       }
     }
 
-    // Funzione per gestire la fine della partita
+    // Gestisci la fine della partita
     function handleGameOver(result) {
       if (result.winner === 'draw') {
         alert('It\'s a draw!');
@@ -104,42 +97,26 @@
       createGameBoard();
     }
 
-    // Imposta l'username quando la pagina si carica
-    window.onload = () => {
-      setUsername();
-    };
+    // Imposta l'username all'avvio della pagina
+    window.onload = setUsername;
 
-    // Ricevi un messaggio quando la partita inizia
+    // Ricevi l'inizio della partita
     socket.on('gameStart', ({ gameId: id, role, symbol }) => {
       gameId = id;
-      if (role === 'player1') {
-        currentPlayer = symbol;
-      } else {
-        currentPlayer = symbol;
-      }
+      currentPlayer = symbol;
       alert(`Game started! You are playing as ${symbol}.`);
       createGameBoard();
     });
 
-    // Ricevi una notifica che il gioco è finito
+    // Ricevi la fine della partita
     socket.on('gameOver', handleGameOver);
 
-    // Ricevi una notifica del tabellone aggiornato
-    socket.on('updateBoard', ({ board, currentPlayer }) => {
+    // Ricevi aggiornamenti del tabellone
+    socket.on('updateBoard', ({ board, currentPlayer: current }) => {
       updateGameBoard(board);
-      currentPlayer = currentPlayer;
-    });
-
-    // Gestisci la modalità spettatore
-    socket.on('spectator', (message) => {
-      alert(message);
-    });
-
-    // Gestisci la notifica di simbolo non disponibile
-    socket.on('symbolUnavailable', (symbol) => {
-      alert(`The symbol ${symbol} is already chosen by another player. Please choose a different symbol.`);
-      setSymbol();
+      currentPlayer = current;
     });
   </script>
 </body>
 </html>
+
