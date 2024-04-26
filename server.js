@@ -148,6 +148,10 @@ io.on('connection', (socket) => {
 });
 
 // Configurazione delle route per il server
+app.get('/', function (req, res) {
+    res.sendFile(__dirname + '/public/client.html');
+});
+// Configurazione delle route per il server
 app.use(express.static('public'));
 
 server.listen(PORT, () => {
