@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Tic-Tac-Toe</title>
@@ -11,6 +12,7 @@
             grid-template-columns: repeat(3, 100px);
             grid-template-rows: repeat(3, 100px);
         }
+
         #gameBoard div {
             border: 1px solid black;
             display: flex;
@@ -21,6 +23,7 @@
         }
     </style>
 </head>
+
 <body>
     <h1>Tic-Tac-Toe</h1>
     <p>Username: <span id="usernameDisplay"></span></p>
@@ -30,12 +33,12 @@
         const socket = io("https://tic-tac-toe-capozzolo-giannini.glitch.me");
         const gameBoard = document.getElementById('gameBoard');
         const usernameDisplay = document.getElementById('usernameDisplay');
+
         let username;
         let gameId;
-        let currentPlayer;
-        let yourTurn = false; // Indica se è il turno dell'utente
+        let yourSymbol;
+        let yourTurn = false;
 
-        // Imposta l'username
         function setUsername() {
             username = prompt('Enter your username:');
             if (username) {
@@ -44,7 +47,6 @@
             }
         }
 
-        // Permette all'utente di scegliere il simbolo
         function chooseSymbol() {
             const symbol = prompt('Choose your symbol (X or O):').toUpperCase();
             if (symbol === 'X' || symbol === 'O') {
@@ -55,11 +57,10 @@
             }
         }
 
-        // Crea il tabellone di gioco
         function createGameBoard() {
             gameBoard.innerHTML = '';
             for (let row = 0; row < 3; row++) {
-                for (let col = 0; col++) {
+                for (let col = 0; col < 3; col++) {
                     const cell = document.createElement('div');
                     cell.setAttribute('data-row', row);
                     cell.setAttribute('data-col', col);
@@ -69,25 +70,19 @@
             }
         }
 
-        // Gestisci il click su una cella
         function handleCellClick(e) {
             const row = parseInt(e.target.getAttribute('data-row'));
             const col = parseInt(e.target.getAttribute('data-col'));
 
-            // Verifica se è il turno dell'utente
             if (!yourTurn) {
                 alert('It\'s not your turn!');
                 return;
             }
 
-            // Invia la mossa al server
             socket.emit('makeMove', { gameId, row, col });
-
-            // Nasconde l'alert "It's your turn!" dopo che l'utente ha effettuato la mossa
-            yourTurn = false;
+            yourTurn = false; // Dopo la mossa, aggiorna la variabile yourTurn
         }
 
-        // Aggiorna il tabellone di gioco
         function updateGameBoard(board) {
             for (let row = 0; row < 3; row++) {
                 for (let col = 0; col < 3; col++) {
@@ -97,7 +92,6 @@
             }
         }
 
-        // Gestisci la fine della partita
         function handleGameEnd(result) {
             if (result.winner === 'draw') {
                 alert('It\'s a draw!');
@@ -105,43 +99,40 @@
                 alert(`${result.winner} wins!`);
             }
             alert('The game has ended. Please log in again to start a new game.');
-            // Richiedi un nuovo login
-            setUsername();
+            setUsername(); // Reimposta l'username per iniziare una nuova partita
         }
 
-        // Imposta l'username all'avvio della pagina
         window.onload = setUsername;
 
-        // Ricevi l'inizio della partita
-        socket.on('gameStart', ({ gameId: id, role, symbol, currentPlayer }) => {
+        socket.on('gameStart', ({ gameId: id, yourSymbol: symbol, currentPlayer }) => {
             gameId = id;
-            alert(`Game started! You are playing as ${symbol}. Current player: ${currentPlayer}`);
+            yourSymbol = symbol;
+            currentPlayer = currentPlayer;
+            alert(`Game started! You are playing as ${yourSymbol}. Current player: ${currentPlayer}`);
             createGameBoard();
         });
 
-        // Ricevi l'evento `updateBoard` per aggiornare la tabella di gioco
         socket.on('updateBoard', ({ board, currentPlayer, yourTurn: isYourTurn }) => {
             updateGameBoard(board);
-            currentPlayer = currentPlayer;
             yourTurn = isYourTurn;
 
-            // Mostra l'alert "It's your turn!" solo quando il turno cambia
+            // Mostra l'alert solo quando il turno dell'utente cambia
             if (yourTurn) {
                 alert('It\'s your turn!');
+            } else {
+                console.log(`It's ${currentPlayer}'s turn!`);
             }
         });
 
-        // Gestisci la fine della partita
         socket.on('gameEnd', handleGameEnd);
 
-        // Gestisci l'evento waitingForPlayer
         socket.on('waitingForPlayer', () => {
             alert('Waiting for an opponent to join the game...');
         });
     </script>
 </body>
-</html>
 
+</html>
 
 
 

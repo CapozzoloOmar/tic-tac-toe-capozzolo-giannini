@@ -8,10 +8,9 @@ const io = socketio(server);
 
 const PORT = process.env.PORT || 3000;
 
-let game = null; // Variabile per gestire una partita attiva
-let spectatorQueue = []; // Coda di spettatori per le partite successive
+let game = null;
+let spectatorQueue = [];
 
-// Funzione per controllare se c'è un vincitore
 function checkWinner(board) {
     const winningCombinations = [
         [[0, 0], [0, 1], [0, 2]],
@@ -33,12 +32,10 @@ function checkWinner(board) {
     return null;
 }
 
-// Funzione per scegliere casualmente il giocatore iniziale
 function chooseRandomPlayer(player1, player2) {
     return Math.random() < 0.5 ? player1 : player2;
 }
 
-// Funzione per inviare aggiornamenti del gioco ai giocatori e agli spettatori
 function updateGame() {
     if (game) {
         const { board, currentPlayer } = game;
@@ -63,16 +60,8 @@ function updateGame() {
     }
 }
 
-// Funzione per verificare se la partita è finita in parità
-function isDraw(board) {
-    // Controlla se tutti gli spazi sulla griglia di gioco sono occupati
-    return board.flat().every(cell => cell !== '');
-}
-
-// Funzione per resettare il gioco
 function resetGame() {
     game = null;
-    // Inizia una nuova partita con i primi due spettatori in coda, se presenti
     if (spectatorQueue.length >= 2) {
         const nextPlayer1 = io.sockets.sockets.get(spectatorQueue.shift());
         const nextPlayer2 = io.sockets.sockets.get(spectatorQueue.shift());
@@ -80,7 +69,6 @@ function resetGame() {
     }
 }
 
-// Funzione per avviare il gioco e assegnare simboli ai giocatori
 function startGame(player1, player2) {
     game = {
         player1,
@@ -111,7 +99,6 @@ function startGame(player1, player2) {
     updateGame();
 }
 
-// Gestione delle connessioni dei client
 io.on('connection', (socket) => {
     console.log('New client connected:', socket.id);
 
@@ -194,7 +181,7 @@ io.on('connection', (socket) => {
                         io.to(spectatorId).emit('gameOver', { winner: game.currentPlayer.username });
                     });
                     resetGame();
-                } else if (isDraw(game.board)) {
+                } else if (game.board.flat().every(cell => cell !== '')) {
                     // Controlla se la partita è finita in parità
                     game.gameOver = true;
                     io.to(game.player1.id).emit('gameOver', { winner: 'draw' });
