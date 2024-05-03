@@ -9,7 +9,7 @@ const io = socketio(server);
 const PORT = process.env.PORT || 3000;
 
 let game = null; // Variabile per gestire una partita attiva
-let spectatorQueue = []; // Coda di spettatori che avranno la priorità per le partite successive
+let spectatorQueue = []; // Coda di spettatori per le partite successive
 
 // Funzione per controllare se c'è un vincitore
 function checkWinner(board) {
@@ -64,9 +64,14 @@ function updateGame() {
   }
 }
 
-// Funzione per resettare il gioco
+// Funzione per resettare il gioco e iniziare una nuova partita con i giocatori dalla coda
 function resetGame() {
   game = null;
+  if (spectatorQueue.length >= 2) {
+    const nextPlayer1 = io.sockets.sockets.get(spectatorQueue.shift());
+    const nextPlayer2 = io.sockets.sockets.get(spectatorQueue.shift());
+    startGame(nextPlayer1, nextPlayer2);
+  }
 }
 
 // Funzione per avviare il gioco e assegnare simboli ai giocatori
@@ -126,12 +131,7 @@ io.on('connection', (socket) => {
         }
       };
       // Invia messaggio al giocatore per informarlo che è il primo giocatore
-      socket.emit('gameStart', {
-        gameId: socket.id,
-        role: 'player1',
-        symbol,
-        currentPlayer: socket.username
-      });
+      socket.emit('waitingForPlayer');
     } else if (!game.player2) {
       // Se c'è una partita attiva, aggiungi il secondo giocatore
       if (symbol === game.symbols.player1) {
@@ -188,12 +188,6 @@ io.on('connection', (socket) => {
             io.to(spectatorId).emit('gameOver', { winner: game.currentPlayer.username });
           });
           resetGame();
-          // Dopo aver resettato il gioco, inizia una nuova partita con i prossimi due spettatori in coda
-          if (spectatorQueue.length >= 2) {
-            const nextPlayer1 = io.sockets.sockets.get(spectatorQueue.shift());
-            const nextPlayer2 = io.sockets.sockets.get(spectatorQueue.shift());
-            startGame(nextPlayer1, nextPlayer2);
-          }
         } else if (game.board.flat().every(cell => cell !== '')) {
           // Controlla se la partita è finita in parità
           game.gameOver = true;
@@ -203,12 +197,6 @@ io.on('connection', (socket) => {
             io.to(spectatorId).emit('gameOver', { winner: 'draw' });
           });
           resetGame();
-          // Dopo aver resettato il gioco, inizia una nuova partita con i prossimi due spettatori in coda
-          if (spectatorQueue.length >= 2) {
-            const nextPlayer1 = io.sockets.sockets.get(spectatorQueue.shift());
-            const nextPlayer2 = io.sockets.sockets.get(spectatorQueue.shift());
-            startGame(nextPlayer1, nextPlayer2);
-          }
         } else {
           // Cambia il turno del giocatore
           game.currentPlayer = game.currentPlayer === game.player1 ? game.player2 : game.player1;
@@ -249,6 +237,7 @@ app.use(express.static('public'));
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
 
 
 
