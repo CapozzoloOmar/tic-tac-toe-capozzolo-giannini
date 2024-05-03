@@ -1,136 +1,147 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Tic-Tac-Toe</title>
-  <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"></script>
-  <style>
-    /* Stili CSS */
-    #gameBoard {
-      display: grid;
-      grid-template-columns: repeat(3, 100px);
-      grid-template-rows: repeat(3, 100px);
-    }
-    #gameBoard div {
-      border: 1px solid black;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-size: 2rem;
-      cursor: pointer;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Tic-Tac-Toe</title>
+    <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"></script>
+    <style>
+        /* Stili CSS */
+        #gameBoard {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-template-rows: repeat(3, 100px);
+        }
+        #gameBoard div {
+            border: 1px solid black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-  <h1>Tic-Tac-Toe</h1>
-  <p>Username: <span id="usernameDisplay"></span></p>
-  <div id="gameBoard"></div>
+    <h1>Tic-Tac-Toe</h1>
+    <p>Username: <span id="usernameDisplay"></span></p>
+    <div id="gameBoard"></div>
 
-  <script>
-    const socket = io("https://tic-tac-toe-capozzolo-giannini.glitch.me");
-    const gameBoard = document.getElementById('gameBoard');
-    const usernameDisplay = document.getElementById('usernameDisplay');
+    <script>
+        const socket = io("https://tic-tac-toe-capozzolo-giannini.glitch.me");
+        const gameBoard = document.getElementById('gameBoard');
+        const usernameDisplay = document.getElementById('usernameDisplay');
+        let username;
+        let gameId;
+        let currentPlayer;
+        let yourTurn = false; // Indica se è il turno dell'utente
 
-    let username;
-    let currentPlayer;
-    let gameId;
-    let isGameActive = false; // Variabile per controllare se il gioco è in corso
-
-    // Imposta l'username
-    function setUsername() {
-      username = prompt('Enter your username:');
-      if (username) {
-        usernameDisplay.textContent = username;
-        chooseSymbol();
-      }
-    }
-
-    // Permette all'utente di scegliere il simbolo
-    function chooseSymbol() {
-      const symbol = prompt('Choose your symbol (X or O):').toUpperCase();
-      if (symbol === 'X' || symbol === 'O') {
-        socket.emit('setUsernameAndSymbol', { username, symbol });
-      } else {
-        alert('Invalid symbol! Choose either X or O.');
-        chooseSymbol();
-      }
-    }
-
-    // Crea il tabellone di gioco
-    function createGameBoard() {
-      gameBoard.innerHTML = '';
-      for (let row = 0; row < 3; row++) {
-        for (let col = 0; col < 3; col++) {
-          const cell = document.createElement('div');
-          cell.setAttribute('data-row', row);
-          cell.setAttribute('data-col', col);
-          cell.addEventListener('click', handleCellClick);
-          gameBoard.appendChild(cell);
+        // Imposta l'username
+        function setUsername() {
+            username = prompt('Enter your username:');
+            if (username) {
+                usernameDisplay.textContent = username;
+                chooseSymbol();
+            }
         }
-      }
-    }
 
-    // Gestisci il click su una cella
-    function handleCellClick(e) {
-      const row = parseInt(e.target.getAttribute('data-row'));
-      const col = parseInt(e.target.getAttribute('data-col'));
-
-      // Verifica se il gioco è in corso e se è il turno dell'utente
-      if (!isGameActive || currentPlayer !== username) {
-        alert('It\'s not your turn or you need to wait for an opponent to join the game.');
-        return;
-      }
-
-      // Invio delle coordinate della cella cliccata al server
-      socket.emit('makeMove', { gameId, row, col });
-    }
-
-    // Aggiorna il tabellone di gioco
-    function updateGameBoard(board) {
-      for (let row = 0; row < 3; row++) {
-        for (let col = 0; col < 3; col++) {
-          const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-          cell.textContent = board[row][col];
+        // Permette all'utente di scegliere il simbolo
+        function chooseSymbol() {
+            const symbol = prompt('Choose your symbol (X or O):').toUpperCase();
+            if (symbol === 'X' || symbol === 'O') {
+                socket.emit('setUsernameAndSymbol', { username, symbol });
+            } else {
+                alert('Invalid symbol! Choose either X or O.');
+                chooseSymbol();
+            }
         }
-      }
-    }
 
-    // Gestisci la fine della partita
-    function handleGameEnd(result) {
-      if (result.winner === 'draw') {
-        alert('It\'s a draw!');
-      } else {
-        alert(`${result.winner} wins!`);
-      }
-      alert('The game has ended. Please log in again to start a new game.');
-      // Richiedi un nuovo login
-      setUsername();
-    }
+        // Crea il tabellone di gioco
+        function createGameBoard() {
+            gameBoard.innerHTML = '';
+            for (let row = 0; row < 3; row++) {
+                for (let col = 0; col++) {
+                    const cell = document.createElement('div');
+                    cell.setAttribute('data-row', row);
+                    cell.setAttribute('data-col', col);
+                    cell.addEventListener('click', handleCellClick);
+                    gameBoard.appendChild(cell);
+                }
+            }
+        }
 
-    // Imposta l'username all'avvio della pagina
-    window.onload = setUsername;
+        // Gestisci il click su una cella
+        function handleCellClick(e) {
+            const row = parseInt(e.target.getAttribute('data-row'));
+            const col = parseInt(e.target.getAttribute('data-col'));
 
-    // Ricevi l'inizio della partita
-    socket.on('gameStart', ({ gameId: id, role, symbol, currentPlayer }) => {
-      gameId = id;
-      isGameActive = true; // Il gioco è in corso
-      currentPlayer = currentPlayer; // Imposta il turno iniziale
-      alert(`Game started! You are playing as ${symbol}. Current player: ${currentPlayer}.`);
-      createGameBoard();
-    });
+            // Verifica se è il turno dell'utente
+            if (!yourTurn) {
+                alert('It\'s not your turn!');
+                return;
+            }
 
-    // Ricevi l'evento `updateBoard` per aggiornare la tabella di gioco
-    socket.on('updateBoard', ({ board, currentPlayer }) => {
-      updateGameBoard(board);
-      // Aggiorna il turno corrente
-      currentPlayer = currentPlayer;
-      alert(`It's ${currentPlayer}'s turn!`);
-    });
+            // Invia la mossa al server
+            socket.emit('makeMove', { gameId, row, col });
 
-    // Gestisci la fine della partita
-    socket.on('gameEnd', handleGameEnd);
-  </script>
+            // Nasconde l'alert "It's your turn!" dopo che l'utente ha effettuato la mossa
+            yourTurn = false;
+        }
+
+        // Aggiorna il tabellone di gioco
+        function updateGameBoard(board) {
+            for (let row = 0; row < 3; row++) {
+                for (let col = 0; col < 3; col++) {
+                    const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                    cell.textContent = board[row][col];
+                }
+            }
+        }
+
+        // Gestisci la fine della partita
+        function handleGameEnd(result) {
+            if (result.winner === 'draw') {
+                alert('It\'s a draw!');
+            } else {
+                alert(`${result.winner} wins!`);
+            }
+            alert('The game has ended. Please log in again to start a new game.');
+            // Richiedi un nuovo login
+            setUsername();
+        }
+
+        // Imposta l'username all'avvio della pagina
+        window.onload = setUsername;
+
+        // Ricevi l'inizio della partita
+        socket.on('gameStart', ({ gameId: id, role, symbol, currentPlayer }) => {
+            gameId = id;
+            alert(`Game started! You are playing as ${symbol}. Current player: ${currentPlayer}`);
+            createGameBoard();
+        });
+
+        // Ricevi l'evento `updateBoard` per aggiornare la tabella di gioco
+        socket.on('updateBoard', ({ board, currentPlayer, yourTurn: isYourTurn }) => {
+            updateGameBoard(board);
+            currentPlayer = currentPlayer;
+            yourTurn = isYourTurn;
+
+            // Mostra l'alert "It's your turn!" solo quando il turno cambia
+            if (yourTurn) {
+                alert('It\'s your turn!');
+            }
+        });
+
+        // Gestisci la fine della partita
+        socket.on('gameEnd', handleGameEnd);
+
+        // Gestisci l'evento waitingForPlayer
+        socket.on('waitingForPlayer', () => {
+            alert('Waiting for an opponent to join the game...');
+        });
+    </script>
 </body>
 </html>
+
+
 
 
