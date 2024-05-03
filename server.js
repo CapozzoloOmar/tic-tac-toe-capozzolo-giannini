@@ -8,9 +8,10 @@ const io = socketio(server);
 
 const PORT = process.env.PORT || 3000;
 
-let game = null;
-let spectatorQueue = [];
+let game = null; // Variabile per gestire una partita attiva
+let spectatorQueue = []; // Coda di spettatori
 
+// Funzione per verificare se c'è un vincitore
 function checkWinner(board) {
     const winningCombinations = [
         [[0, 0], [0, 1], [0, 2]],
@@ -32,10 +33,12 @@ function checkWinner(board) {
     return null;
 }
 
-function chooseRandomPlayer(player1, player2) {
-    return Math.random() < 0.5 ? player1 : player2;
+// Funzione per verificare se la partita è finita in pareggio
+function isDraw(board) {
+    return board.flat().every(cell => cell !== '');
 }
 
+// Funzione per aggiornare il gioco
 function updateGame() {
     if (game) {
         const { board, currentPlayer } = game;
@@ -60,8 +63,10 @@ function updateGame() {
     }
 }
 
+// Funzione per resettare la partita
 function resetGame() {
     game = null;
+    // Inizia una nuova partita con i primi due spettatori in coda, se presenti
     if (spectatorQueue.length >= 2) {
         const nextPlayer1 = io.sockets.sockets.get(spectatorQueue.shift());
         const nextPlayer2 = io.sockets.sockets.get(spectatorQueue.shift());
@@ -69,14 +74,14 @@ function resetGame() {
     }
 }
 
+// Funzione per avviare il gioco e assegnare simboli ai giocatori
 function startGame(player1, player2) {
     game = {
         player1,
         player2,
         board: Array(3).fill('').map(() => Array(3).fill('')),
-        currentPlayer: chooseRandomPlayer(player1, player2),
+        currentPlayer: Math.random() < 0.5 ? player1 : player2,
         gameOver: false,
-        winner: null,
         symbols: {
             player1: player1.symbol,
             player2: player2.symbol
@@ -99,8 +104,9 @@ function startGame(player1, player2) {
     updateGame();
 }
 
+// Gestione delle connessioni dei client
 io.on('connection', (socket) => {
-    console.log('New client connected:', socket.id);
+    console.log(`New client connected: ${socket.id}`);
 
     // Ricevi il nome utente e il simbolo scelto
     socket.on('setUsernameAndSymbol', ({ username, symbol }) => {
@@ -134,7 +140,7 @@ io.on('connection', (socket) => {
 
             // Assegna il secondo giocatore alla partita
             game.player2 = socket;
-            game.currentPlayer = chooseRandomPlayer(game.player1, game.player2);
+            game.currentPlayer = Math.random() < 0.5 ? game.player1 : game.player2;
             game.symbols = {
                 player1: game.player1.symbol,
                 player2: symbol
@@ -181,8 +187,8 @@ io.on('connection', (socket) => {
                         io.to(spectatorId).emit('gameOver', { winner: game.currentPlayer.username });
                     });
                     resetGame();
-                } else if (game.board.flat().every(cell => cell !== '')) {
-                    // Controlla se la partita è finita in parità
+                } else if (isDraw(game.board)) {
+                    // Controlla se la partita è finita in pareggio
                     game.gameOver = true;
                     io.to(game.player1.id).emit('gameOver', { winner: 'draw' });
                     io.to(game.player2.id).emit('gameOver', { winner: 'draw' });
@@ -201,7 +207,7 @@ io.on('connection', (socket) => {
 
     // Disconnessione di un client
     socket.on('disconnect', () => {
-        console.log('Client disconnected:', socket.id);
+        console.log(`Client disconnected: ${socket.id}`);
         // Rimuovi lo spettatore se presente
         const index = spectatorQueue.indexOf(socket.id);
         if (index !== -1) {
@@ -229,7 +235,6 @@ app.use(express.static('public'));
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
-
 
 
 
