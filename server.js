@@ -1,20 +1,24 @@
+// Importiamo i moduli necessari
 const express = require('express');
 const http = require('http');
 const socketio = require('socket.io');
 
+// Configuriamo l'app Express e il server HTTP
 const app = express();
 const server = http.createServer(app);
 const io = socketio(server);
 
+// Porta su cui il server ascolterà
 const PORT = process.env.PORT || 3000;
 
 // Stato della partita
-let game = null; // Variabile per tenere traccia della partita attiva
-let spectatorQueue = []; // Coda di spettatori
+let game = null;
+let spectatorQueue = []; // Coda di spettatori in attesa
 
 // Funzione per verificare se c'è un vincitore sulla griglia di gioco
 function checkWinner(board) {
     const winningCombinations = [
+        // Combinazioni vincenti
         [[0, 0], [0, 1], [0, 2]],
         [[1, 0], [1, 1], [1, 2]],
         [[2, 0], [2, 1], [2, 2]],
@@ -25,7 +29,6 @@ function checkWinner(board) {
         [[0, 2], [1, 1], [2, 0]]
     ];
 
-    // Itera attraverso le combinazioni vincenti per verificare se c'è un vincitore
     for (const [a, b, c] of winningCombinations) {
         if (board[a[0]][a[1]] && board[a[0]][a[1]] === board[b[0]][b[1]] && board[a[0]][a[1]] === board[c[0]][c[1]]) {
             return { winner: board[a[0]][a[1]], line: [a, b, c] };
@@ -211,7 +214,7 @@ io.on('connection', (socket) => {
         const index = spectatorQueue.indexOf(socket.id);
         if (index !== -1) {
             spectatorQueue.splice(index, 1);
-        } else se game) {
+        } else if (game) {
             // Verifica se il client era un giocatore nella partita
             if (game.player1 && game.player1.id === socket.id) {
                 io.to(game.player2.id).emit('gameAborted');
@@ -236,4 +239,3 @@ app.use(express.static('public'));
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
-
