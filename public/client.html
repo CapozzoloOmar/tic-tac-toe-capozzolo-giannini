@@ -33,26 +33,26 @@
         const socket = io("https://tic-tac-toe-capozzolo-giannini.glitch.me");
         const gameBoard = document.getElementById('gameBoard');
         const usernameDisplay = document.getElementById('usernameDisplay');
-        let gameId, yourSymbol, yourTurn = false;
+        let username, gameId, yourSymbol, yourTurn = false;
 
         function setUsername() {
-            const username = prompt('Enter your username:');
+            username = prompt('Enter your username:');
             if (username) {
                 usernameDisplay.textContent = username;
-                chooseSymbol(username);
+                chooseSymbol();
             } else {
                 alert('Please enter a valid username.');
                 setUsername();
             }
         }
 
-        function chooseSymbol(username) {
+        function chooseSymbol() {
             const symbol = prompt('Choose your symbol (X or O):').toUpperCase();
-            if (symbol === 'X' || symbol === 'O') {
+            if (symbol === 'X' || 'O') {
                 socket.emit('setUsernameAndSymbol', { username, symbol });
             } else {
                 alert('Invalid symbol! Choose either X or O.');
-                chooseSymbol(username);
+                chooseSymbol();
             }
         }
 
@@ -74,7 +74,7 @@
             const col = parseInt(e.target.getAttribute('data-col'));
 
             if (!yourTurn) {
-                alert("It's not your turn!");
+                alert('It\'s not your turn!');
                 return;
             }
 
@@ -92,7 +92,7 @@
 
         function handleGameEnd(result) {
             if (result.winner === 'draw') {
-                alert("It's a draw!");
+                alert('It\'s a draw!');
             } else {
                 alert(`${result.winner} wins!`);
             }
@@ -102,24 +102,20 @@
 
         window.onload = setUsername;
 
-        socket.on('gameStart', ({ gameId: id, yourSymbol: sym, opponentSymbol, currentPlayer }) => {
+        socket.on('gameStart', ({ gameId: id, yourSymbol: symbol, opponentSymbol: oppSymbol, currentPlayer }) => {
             gameId = id;
-            yourSymbol = sym;
+            yourSymbol = symbol;
             createGameBoard();
-            alert(`Game started! You are playing as ${yourSymbol}. Your opponent is playing as ${opponentSymbol}. Current player: ${currentPlayer}.`);
-            // Aggiorniamo il turno del giocatore in base al currentPlayer
-            yourTurn = (currentPlayer === yourSymbol);
-            if (yourTurn) {
-                alert("It's your turn!");
-            }
+            alert(`Game started! You are playing as ${symbol}. Your opponent is playing as ${oppSymbol}. Current player: ${currentPlayer}`);
         });
 
-        socket.on('updateBoard', ({ board, currentPlayer }) => {
+        socket.on('updateBoard', ({ board, currentPlayer, yourTurn: turn }) => {
             updateGameBoard(board);
-            // Aggiorniamo il turno del giocatore in base al currentPlayer
-            yourTurn = (currentPlayer === yourSymbol);
+            yourTurn = turn;
             if (yourTurn) {
-                alert("It's your turn!");
+                alert('It\'s your turn!');
+            } else {
+                alert(`It's ${currentPlayer}'s turn.`);
             }
         });
 
@@ -132,3 +128,4 @@
 </body>
 
 </html>
+
