@@ -80,7 +80,7 @@ function startGame(player1, player2) {
         player1,
         player2,
         board: Array(3).fill('').map(() => Array(3).fill('')),
-        currentPlayer: Math.random() < 0.5 ? player1 : player2,
+        currentPlayer: player1.symbol === 'X' ? player1 : player2, // Il giocatore che ha selezionato X parte per primo
         gameOver: false,
         symbols: {
             player1: player1.symbol,
@@ -91,12 +91,14 @@ function startGame(player1, player2) {
     // Invia messaggi di avvio della partita ai giocatori
     io.to(player1.id).emit('gameStart', {
         gameId: player1.id,
-        symbol: game.symbols.player1,
+        yourSymbol: game.symbols.player1,
+        opponentSymbol: game.symbols.player2,
         currentPlayer: game.currentPlayer.username
     });
     io.to(player2.id).emit('gameStart', {
         gameId: player2.id,
-        symbol: game.symbols.player2,
+        yourSymbol: game.symbols.player2,
+        opponentSymbol: game.symbols.player1,
         currentPlayer: game.currentPlayer.username
     });
 
@@ -140,7 +142,7 @@ io.on('connection', (socket) => {
 
             // Assegna il secondo giocatore alla partita
             game.player2 = socket;
-            game.currentPlayer = Math.random() < 0.5 ? game.player1 : game.player2;
+            game.currentPlayer = game.player1.symbol === 'X' ? game.player1 : game.player2; // Chi ha scelto X parte per primo
             game.symbols = {
                 player1: game.player1.symbol,
                 player2: symbol
@@ -212,8 +214,7 @@ io.on('connection', (socket) => {
         const index = spectatorQueue.indexOf(socket.id);
         if (index !== -1) {
             spectatorQueue.splice(index, 1);
-        } else if (game) {
-            // Verifica se il client era un giocatore in partita
+        } else se il client era un giocatore nella partita
             if (game.player1 && game.player1.id === socket.id) {
                 io.to(game.player2.id).emit('gameAborted');
                 resetGame();
@@ -235,9 +236,6 @@ app.use(express.static('public'));
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
-
-
-
 
 
 

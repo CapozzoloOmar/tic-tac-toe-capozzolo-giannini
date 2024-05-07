@@ -33,19 +33,19 @@
         const socket = io("https://tic-tac-toe-capozzolo-giannini.glitch.me");
         const gameBoard = document.getElementById('gameBoard');
         const usernameDisplay = document.getElementById('usernameDisplay');
-        let gameId, yourSymbol, currentPlayer;
-        let yourTurn = false; // Indica se è il turno dell'utente
+        let gameId, yourSymbol, yourTurn = false;
 
-        // Imposta l'username
         function setUsername() {
             username = prompt('Enter your username:');
             if (username) {
                 usernameDisplay.textContent = username;
                 chooseSymbol();
+            } else {
+                alert('Please enter a valid username.');
+                setUsername();
             }
         }
 
-        // Permette all'utente di scegliere il simbolo
         function chooseSymbol() {
             const symbol = prompt('Choose your symbol (X or O):').toUpperCase();
             if (symbol === 'X' || symbol === 'O') {
@@ -56,7 +56,6 @@
             }
         }
 
-        // Crea il tabellone di gioco
         function createGameBoard() {
             gameBoard.innerHTML = '';
             for (let row = 0; row < 3; row++) {
@@ -70,7 +69,6 @@
             }
         }
 
-        // Gestisce il click su una cella
         function handleCellClick(e) {
             const row = parseInt(e.target.getAttribute('data-row'));
             const col = parseInt(e.target.getAttribute('data-col'));
@@ -80,11 +78,9 @@
                 return;
             }
 
-            // Invia la mossa al server
             socket.emit('makeMove', { gameId, row, col });
         }
 
-        // Aggiorna il tabellone di gioco
         function updateGameBoard(board) {
             for (let row = 0; row < 3; row++) {
                 for (let col = 0; col < 3; col++) {
@@ -94,7 +90,6 @@
             }
         }
 
-        // Gestisci la fine della partita
         function handleGameEnd(result) {
             if (result.winner === 'draw') {
                 alert('It\'s a draw!');
@@ -102,12 +97,11 @@
                 alert(`${result.winner} wins!`);
             }
             alert('The game has ended. Please log in again to start a new game.');
-            setUsername(); // Reimposta l'username per iniziare una nuova partita
+            setUsername();
         }
 
         window.onload = setUsername;
 
-        // Ricevi l'inizio della partita
         socket.on('gameStart', ({ gameId: id, yourSymbol: symbol, currentPlayer }) => {
             gameId = id;
             yourSymbol = symbol;
