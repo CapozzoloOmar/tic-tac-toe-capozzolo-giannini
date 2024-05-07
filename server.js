@@ -1,24 +1,20 @@
-// Importiamo i moduli necessari
 const express = require('express');
 const http = require('http');
 const socketio = require('socket.io');
 
-// Configuriamo l'app Express e il server HTTP
 const app = express();
 const server = http.createServer(app);
 const io = socketio(server);
 
-// Porta su cui il server ascolterà
 const PORT = process.env.PORT || 3000;
 
 // Stato della partita
 let game = null; // Variabile per tenere traccia della partita attiva
-let spectatorQueue = []; // Coda di spettatori in attesa
+let spectatorQueue = []; // Coda di spettatori
 
 // Funzione per verificare se c'è un vincitore sulla griglia di gioco
 function checkWinner(board) {
     const winningCombinations = [
-        // Combinazioni vincenti
         [[0, 0], [0, 1], [0, 2]],
         [[1, 0], [1, 1], [1, 2]],
         [[2, 0], [2, 1], [2, 2]],
@@ -71,6 +67,7 @@ function updateGame() {
 // Resetta la partita e inizia una nuova partita se ci sono spettatori in coda
 function resetGame() {
     game = null;
+    // Inizia una nuova partita con i primi due spettatori in coda, se presenti
     if (spectatorQueue.length >= 2) {
         const nextPlayer1 = io.sockets.sockets.get(spectatorQueue.shift());
         const nextPlayer2 = io.sockets.sockets.get(spectatorQueue.shift());
@@ -239,5 +236,4 @@ app.use(express.static('public'));
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
-
 
