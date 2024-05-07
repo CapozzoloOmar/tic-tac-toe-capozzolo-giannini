@@ -30,7 +30,7 @@
     <div id="gameBoard"></div>
 
     <script>
-        const socket = io();
+        const socket = io("https://tic-tac-toe-capozzolo-giannini.glitch.me");
         const gameBoard = document.getElementById('gameBoard');
         const usernameDisplay = document.getElementById('usernameDisplay');
         let gameId, yourSymbol, yourTurn = false;
@@ -74,7 +74,7 @@
             const col = parseInt(e.target.getAttribute('data-col'));
 
             if (!yourTurn) {
-                alert('It\'s not your turn!');
+                alert("It's not your turn!");
                 return;
             }
 
@@ -92,7 +92,7 @@
 
         function handleGameEnd(result) {
             if (result.winner === 'draw') {
-                alert('It\'s a draw!');
+                alert("It's a draw!");
             } else {
                 alert(`${result.winner} wins!`);
             }
@@ -102,18 +102,24 @@
 
         window.onload = setUsername;
 
-        socket.on('gameStart', ({ gameId: id, yourSymbol, opponentSymbol, currentPlayer }) => {
+        socket.on('gameStart', ({ gameId: id, yourSymbol: sym, opponentSymbol, currentPlayer }) => {
             gameId = id;
-            yourSymbol = yourSymbol;
+            yourSymbol = sym;
             createGameBoard();
             alert(`Game started! You are playing as ${yourSymbol}. Your opponent is playing as ${opponentSymbol}. Current player: ${currentPlayer}.`);
+            // Aggiorniamo il turno del giocatore in base al currentPlayer
+            yourTurn = (currentPlayer === yourSymbol);
+            if (yourTurn) {
+                alert("It's your turn!");
+            }
         });
 
-        socket.on('updateBoard', ({ board, currentPlayer, yourTurn }) => {
+        socket.on('updateBoard', ({ board, currentPlayer }) => {
             updateGameBoard(board);
-            this.yourTurn = yourTurn;
+            // Aggiorniamo il turno del giocatore in base al currentPlayer
+            yourTurn = (currentPlayer === yourSymbol);
             if (yourTurn) {
-                alert('It\'s your turn!');
+                alert("It's your turn!");
             }
         });
 
