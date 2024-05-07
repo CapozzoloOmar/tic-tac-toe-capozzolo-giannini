@@ -147,12 +147,8 @@ io.on('connection', (socket) => {
 
             // Assegna il secondo giocatore alla partita
             game.player2 = socket;
-            game.currentPlayer = Math.random() < 0.5 ? game.player1 : game.player2;
-            game.symbols = {
-                player1: game.player1.symbol,
-                player2: symbol
-            };
-
+            game.currentPlayer = game.player1; // Iniziamo con il giocatore che ha "X"
+            
             // Invia messaggi ai giocatori per informarli che la partita è iniziata
             io.to(game.player1.id).emit('gameStart', {
                 gameId: game.id,

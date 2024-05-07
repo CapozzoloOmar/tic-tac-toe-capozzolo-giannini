@@ -30,7 +30,7 @@
     <div id="gameBoard"></div>
 
     <script>
-        const socket = io("https://tic-tac-toe-capozzolo-giannini.glitch.me");
+        const socket = io();
         const gameBoard = document.getElementById('gameBoard');
         const usernameDisplay = document.getElementById('usernameDisplay');
         let gameId, yourSymbol, yourTurn = false;
@@ -126,8 +126,3 @@
 </body>
 
 </html>
-
-
-
-
-
