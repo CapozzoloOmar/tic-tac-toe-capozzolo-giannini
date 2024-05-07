@@ -1,19 +1,24 @@
+// Importiamo i moduli necessari
 const express = require('express');
 const http = require('http');
 const socketio = require('socket.io');
 
+// Configuriamo l'app Express e il server HTTP
 const app = express();
 const server = http.createServer(app);
 const io = socketio(server);
 
+// Porta su cui il server ascolterà
 const PORT = process.env.PORT || 3000;
 
-let game = null; // Stato della partita attiva
-let spectatorQueue = []; // Coda di spettatori
+// Stato della partita
+let game = null; // Variabile per tenere traccia della partita attiva
+let spectatorQueue = []; // Coda di spettatori in attesa
 
-// Verifica se c'è un vincitore sulla griglia di gioco
+// Funzione per verificare se c'è un vincitore sulla griglia di gioco
 function checkWinner(board) {
     const winningCombinations = [
+        // Combinazioni vincenti
         [[0, 0], [0, 1], [0, 2]],
         [[1, 0], [1, 1], [1, 2]],
         [[2, 0], [2, 1], [2, 2]],
@@ -24,9 +29,10 @@ function checkWinner(board) {
         [[0, 2], [1, 1], [2, 0]]
     ];
 
+    // Itera attraverso le combinazioni vincenti per verificare se c'è un vincitore
     for (const [a, b, c] of winningCombinations) {
         if (board[a[0]][a[1]] && board[a[0]][a[1]] === board[b[0]][b[1]] && board[a[0]][a[1]] === board[c[0]][c[1]]) {
-            return board[a[0]][a[1]];
+            return { winner: board[a[0]][a[1]], line: [a, b, c] };
         }
     }
     return null;
@@ -87,14 +93,14 @@ function startGame(player1, player2) {
     };
 
     // Invia messaggi ai giocatori per informarli dell'inizio della partita
-    io.to(player1.id).emit('gameStart', {
-        gameId: player1.id,
+    io.to(firstPlayer.id).emit('gameStart', {
+        gameId: game.id,
         yourSymbol: firstPlayer.symbol,
         opponentSymbol: secondPlayer.symbol,
         currentPlayer: firstPlayer.username
     });
-    io.to(player2.id).emit('gameStart', {
-        gameId: player2.id,
+    io.to(secondPlayer.id).emit('gameStart', {
+        gameId: game.id,
         yourSymbol: secondPlayer.symbol,
         opponentSymbol: firstPlayer.symbol,
         currentPlayer: firstPlayer.username
@@ -173,22 +179,23 @@ io.on('connection', (socket) => {
                 game.board[row][col] = symbol;
 
                 // Verifica se c'è un vincitore
-                const winner = checkWinner(game.board);
-                if (winner) {
+                const winnerInfo = checkWinner(game.board);
+                if (winnerInfo) {
+                    const { winner, line } = winnerInfo;
                     game.gameOver = true;
-                    io.to(game.player1.id).emit('gameOver', { winner: game.currentPlayer.username });
-                    io.to(game.player2.id).emit('gameOver', { winner: game.currentPlayer.username });
+                    io.to(game.player1.id).emit('gameOver', { winner: winner === game.symbols.player1 ? 'hai vinto' : 'hai perso', line });
+                    io.to(game.player2.id).emit('gameOver', { winner: winner === game.symbols.player2 ? 'hai vinto' : 'hai perso', line });
                     spectatorQueue.forEach(spectatorId => {
-                        io.to(spectatorId).emit('gameOver', { winner: game.currentPlayer.username });
+                        io.to(spectatorId).emit('gameOver', { winner: game.currentPlayer.username, line });
                     });
                     resetGame();
                 } else if (isDraw(game.board)) {
                     // Controlla se la partita è finita in pareggio
                     game.gameOver = true;
-                    io.to(game.player1.id).emit('gameOver', { winner: 'draw' });
-                    io.to(game.player2.id).emit('gameOver', { winner: 'draw' });
+                    io.to(game.player1.id).emit('gameOver', { winner: 'parità' });
+                    io.to(game.player2.id).emit('gameOver', { winner: 'parità' });
                     spectatorQueue.forEach(spectatorId => {
-                        io.to(spectatorId).emit('gameOver', { winner: 'draw' });
+                        io.to(spectatorId).emit('gameOver', { winner: 'parità' });
                     });
                     resetGame();
                 } else {
@@ -232,3 +239,4 @@ app.use(express.static('public'));
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+

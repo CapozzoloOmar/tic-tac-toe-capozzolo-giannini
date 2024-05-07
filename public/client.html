@@ -21,6 +21,11 @@
             font-size: 2rem;
             cursor: pointer;
         }
+
+        /* Stile per evidenziare la combinazione vincente */
+        .winning-line {
+            background-color: yellow;
+        }
     </style>
 </head>
 
@@ -36,23 +41,23 @@
         let username, gameId, yourSymbol, yourTurn = false;
 
         function setUsername() {
-            username = prompt('Enter your username:');
+            const username = prompt('Enter your username:');
             if (username) {
                 usernameDisplay.textContent = username;
-                chooseSymbol();
+                chooseSymbol(username);
             } else {
                 alert('Please enter a valid username.');
                 setUsername();
             }
         }
 
-        function chooseSymbol() {
+        function chooseSymbol(username) {
             const symbol = prompt('Choose your symbol (X or O):').toUpperCase();
-            if (symbol === 'X' || 'O') {
+            if (symbol === 'X' || symbol === 'O') {
                 socket.emit('setUsernameAndSymbol', { username, symbol });
             } else {
                 alert('Invalid symbol! Choose either X or O.');
-                chooseSymbol();
+                chooseSymbol(username);
             }
         }
 
@@ -90,23 +95,37 @@
             }
         }
 
+        // Funzione per evidenziare la combinazione vincente
+        function highlightWinningLine(line) {
+            line.forEach(([row, col]) => {
+                const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                cell.classList.add('winning-line'); // Aggiunge la classe CSS per evidenziare le celle
+            });
+        }
+
         function handleGameEnd(result) {
-            if (result.winner === 'draw') {
-                alert('It\'s a draw!');
+            if (result.winner === 'parità') {
+                alert('Parità!');
             } else {
-                alert(`${result.winner} wins!`);
+                alert(`${result.winner}!`);
             }
-            alert('The game has ended. Please log in again to start a new game.');
+
+            // Evidenzia la combinazione vincente se esiste
+            if (result.line) {
+                highlightWinningLine(result.line);
+            }
+
+            alert('La partita è finita. Effettua nuovamente l\'accesso per iniziare una nuova partita.');
             setUsername();
         }
 
         window.onload = setUsername;
 
-        socket.on('gameStart', ({ gameId: id, yourSymbol: symbol, opponentSymbol: oppSymbol, currentPlayer }) => {
+        socket.on('gameStart', ({ gameId: id, yourSymbol, opponentSymbol, currentPlayer }) => {
             gameId = id;
-            yourSymbol = symbol;
+            yourSymbol = yourSymbol;
             createGameBoard();
-            alert(`Game started! You are playing as ${symbol}. Your opponent is playing as ${oppSymbol}. Current player: ${currentPlayer}`);
+            alert(`Game started! You are playing as ${yourSymbol}. Your opponent is playing as ${opponentSymbol}. Current player: ${currentPlayer}.`);
         });
 
         socket.on('updateBoard', ({ board, currentPlayer, yourTurn: turn }) => {
