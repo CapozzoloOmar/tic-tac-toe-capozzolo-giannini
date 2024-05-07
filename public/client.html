@@ -53,10 +53,10 @@
 
         function chooseSymbol(username) {
             const symbol = prompt('Choose your symbol (X or O):').toUpperCase();
-            if (symbol === 'X' || symbol === 'O') {
+            if (symbol === 'X' o 'O') {
                 socket.emit('setUsernameAndSymbol', { username, symbol });
             } else {
-                alert('Invalid symbol! Choose either X or O.');
+                alert('Simbolo non valido! Scegli X o O.');
                 chooseSymbol(username);
             }
         }
@@ -79,7 +79,7 @@
             const col = parseInt(e.target.getAttribute('data-col'));
 
             if (!yourTurn) {
-                alert('It\'s not your turn!');
+                alert('Non è il tuo turno!');
                 return;
             }
 
@@ -125,26 +125,27 @@
             gameId = id;
             yourSymbol = yourSymbol;
             createGameBoard();
-            alert(`Game started! You are playing as ${yourSymbol}. Your opponent is playing as ${opponentSymbol}. Current player: ${currentPlayer}.`);
+            alert(`Partita iniziata! Stai giocando con ${yourSymbol}. Il tuo avversario sta giocando con ${opponentSymbol}. Giocatore corrente: ${currentPlayer}.`);
         });
 
         socket.on('updateBoard', ({ board, currentPlayer, yourTurn: turn }) => {
             updateGameBoard(board);
             yourTurn = turn;
             if (yourTurn) {
-                alert('It\'s your turn!');
+                alert('È il tuo turno!');
             } else {
-                alert(`It's ${currentPlayer}'s turn.`);
+                alert(`È il turno di ${currentPlayer}.`);
             }
         });
 
         socket.on('gameEnd', handleGameEnd);
 
         socket.on('waitingForPlayer', () => {
-            alert('Waiting for an opponent to join the game...');
+            alert('In attesa di un avversario per iniziare la partita...');
         });
     </script>
 </body>
 
 </html>
+
 

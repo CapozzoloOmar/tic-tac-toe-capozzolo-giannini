@@ -214,7 +214,7 @@ io.on('connection', (socket) => {
         const index = spectatorQueue.indexOf(socket.id);
         if (index !== -1) {
             spectatorQueue.splice(index, 1);
-        } else if (game) {
+        } else se game) {
             // Verifica se il client era un giocatore nella partita
             if (game.player1 && game.player1.id === socket.id) {
                 io.to(game.player2.id).emit('gameAborted');
@@ -239,4 +239,5 @@ app.use(express.static('public'));
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+
 
