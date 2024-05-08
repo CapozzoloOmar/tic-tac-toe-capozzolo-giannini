@@ -124,17 +124,10 @@ function startGame(player1, player2) {
   const [firstPlayer, secondPlayer] =
     player1.symbol === "X" ? [player1, player2] : [player2, player1];
 
-  game = {
-    player1: firstPlayer,
-    player2: secondPlayer,
-    board: Array(3)
-      .fill("")
-      .map(() => Array(3).fill("")),
-    currentPlayer: firstPlayer, // Il giocatore con X inizia per primo
-    gameOver: false,
-    winner: null,
-  };
-
+  game.player1 = firstPlayer;
+  game.player2 = secondPlayer;
+  game.currentPlayer = firstPlayer;
+  
   // Invia messaggi ai giocatori per informarli dell'inizio della partita
   io.to(firstPlayer.id).emit("gameStart", {
     gameId: game.id,
@@ -233,7 +226,7 @@ io.on("connection", (socket) => {
         if (winnerInfo) {
           const { winner, line } = winnerInfo;
           game.gameOver = true;
-          if (game) {
+
             io.to(game.player1.id).emit("gameOver", {
               winner:
                 winner === game.symbols.player1 ? "hai vinto" : "hai perso",
@@ -247,7 +240,7 @@ io.on("connection", (socket) => {
             spectatorQueue.forEach((spectatorId) => {
               io.to(spectatorId).emit("gameOver", { winner: winner, line });
             });
-          }
+          
 
           resetGame();
         } else if (isDraw(game.board)) {
