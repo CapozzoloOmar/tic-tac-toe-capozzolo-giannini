@@ -135,7 +135,7 @@
             yourSymbol = yourSymbol;
             createGameBoard();
             alert(`Game started! You are playing as ${yourSymbol}. Your opponent is playing as ${opponentSymbol}. Current player: ${currentPlayer}.`);
-        });
+        });\ 
 
         socket.on('updateBoard', ({ board, currentPlayer, yourTurn: turn }) => {
             updateGameBoard(board);
