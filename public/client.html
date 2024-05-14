@@ -26,6 +26,14 @@
         .winning-line {
             background-color: yellow;
         }
+
+        body {
+            background-color: white; /* Colore di sfondo di default */
+        }
+
+        .your-turn {
+            background-color: lightgreen; /* Sfondo verde quando è il turno del giocatore */
+        }
     </style>
 </head>
 
@@ -83,8 +91,7 @@
                 return;
             }
             
-              socket.emit('makeMove', { gameId, row, col });
-             console.log()
+            socket.emit('makeMove', { gameId, row, col });
         }
 
         function updateGameBoard(board) {
@@ -92,6 +99,7 @@
                 for (let col = 0; col < 3; col++) {
                     const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
                     const symbol = board[row][col];
+                    cell.textContent = symbol;
                 }
             }
         }
@@ -105,7 +113,7 @@
         }
 
         function handleGameEnd(result) {
-            if (result.winner === 'parit à') {
+            if (result.winner === 'parità') {
                 alert('Parità!');
             } else {
                 alert(`${result.winner}!`);
@@ -133,9 +141,9 @@
             updateGameBoard(board);
             yourTurn = turn;
             if (yourTurn) {
-                // alert('It\'s your turn!');
+                document.body.classList.add('your-turn');
             } else {
-                // alert(`It's ${currentPlayer}'s turn.`);
+                document.body.classList.remove('your-turn');
             }
         });
 

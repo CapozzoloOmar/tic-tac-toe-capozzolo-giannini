@@ -250,9 +250,11 @@ io.on("connection", (socket) => {
         // Verifica se c'è un vincitore
         const winnerInfo = checkWinner(game.board);
         if (winnerInfo) {
+          updateGame();
           const { winner, line } = winnerInfo;
           endGame(winner, line);
         } else if (isDraw(game.board)) {
+          updateGame();
           // Controlla se la partita è finita in pareggio
           endGame("parità");
         } else {
