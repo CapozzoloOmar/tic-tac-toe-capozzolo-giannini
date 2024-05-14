@@ -253,6 +253,7 @@ io.on("connection", (socket) => {
           updateGame();
           const { winner, line } = winnerInfo;
           endGame(winner, line);
+          updateGame();
         } else if (isDraw(game.board)) {
           updateGame();
           // Controlla se la partita è finita in pareggio
