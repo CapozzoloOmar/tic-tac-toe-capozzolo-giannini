@@ -108,15 +108,15 @@ function updateGame() {
 }
 
 // Resetta la partita e inizia una nuova partita se ci sono spettatori in coda
-function resetGame() {
-  game = null;
+//function resetGame() {
+  //game = null;
   // Inizia una nuova partita con i primi due spettatori in coda, se presenti
-  if (spectatorQueue.length >= 2) {
-    const nextPlayer1 = io.sockets.sockets.get(spectatorQueue.shift());
-    const nextPlayer2 = io.sockets.sockets.get(spectatorQueue.shift());
-    startGame(nextPlayer1, nextPlayer2);
-  }
-}
+  //if (spectatorQueue.length >= 2) {
+   // const nextPlayer1 = io.sockets.sockets.get(spectatorQueue.shift());
+    //const nextPlayer2 = io.sockets.sockets.get(spectatorQueue.shift());
+    //startGame(nextPlayer1, nextPlayer2);
+  //}
+//}
 
 // Funzione per gestire la fine della partita
 function endGame(winner, line = null) {
@@ -130,7 +130,7 @@ function endGame(winner, line = null) {
     io.to(spectatorId).emit("gameEnd", result);
   });
 
-  resetGame();
+  //resetGame();
 }
 
 // Inizia il gioco assegnando simboli e turni ai giocatori
@@ -252,8 +252,8 @@ io.on("connection", (socket) => {
         if (winnerInfo) {
           updateGame();
           const { winner, line } = winnerInfo;
-          endGame(winner, line);
           updateGame();
+          endGame(winner, line);
         } else if (isDraw(game.board)) {
           updateGame();
           // Controlla se la partita è finita in pareggio
