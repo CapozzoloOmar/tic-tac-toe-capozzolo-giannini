@@ -92,7 +92,6 @@
                 for (let col = 0; col < 3; col++) {
                     const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
                     const symbol = board[row][col];
-                    cell.textContent = symbol !== "" ? symbol : ""; // Imposta il testo della cella al simbolo corrispondente se presente, altrimenti imposta il testo a una stringa vuota
                 }
             }
         }
@@ -106,7 +105,7 @@
         }
 
         function handleGameEnd(result) {
-            if (result.winner === 'parità') {
+            if (result.winner === 'parit à') {
                 alert('Parità!');
             } else {
                 alert(`${result.winner}!`);
