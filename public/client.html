@@ -82,8 +82,9 @@
                 alert('It\'s not your turn!');
                 return;
             }
-
-            socket.emit('makeMove', { gameId, row, col });
+            
+              socket.emit('makeMove', { gameId, row, col });
+            
         }
 
         function updateGameBoard(board) {
@@ -104,15 +105,16 @@
         }
 
         function handleGameEnd(result) {
-            // Aggiorna la board prima di mostrare il popup di vittoria
-            updateGameBoard(result.board);
+            if (result.winner === 'parità') {
+                alert('Parità!');
+            } else {
+                alert(`${result.winner}!`);
+            }
 
             // Evidenzia la combinazione vincente se esiste
             if (result.line) {
                 highlightWinningLine(result.line);
             }
-
-            alert(result.message);
 
             alert('La partita è finita. Effettua nuovamente l\'accesso per iniziare una nuova partita.');
             setUsername();
@@ -131,9 +133,9 @@
             updateGameBoard(board);
             yourTurn = turn;
             if (yourTurn) {
-                //alert('It\'s your turn!');
+                // alert('It\'s your turn!');
             } else {
-                alert(`It's ${currentPlayer}'s turn.`);
+                // alert(`It's ${currentPlayer}'s turn.`);
             }
         });
 
