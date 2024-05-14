@@ -118,16 +118,42 @@ function resetGame() {
   }
 }
 
+// Funzione per gestire la fine della partita
+function endGame(winner, line = null) {
+  game.gameOver = true;
+  const message = winner === "parità" ? "Parità!" : `Il giocatore ${winner} ha vinto!`;
+  const result = { message, winner, line };
+
+  io.to(game.player1.id).emit("gameEnd", result);
+  io.to(game.player2.id).emit("gameEnd", result);
+  spectatorQueue.forEach((spectatorId) => {
+    io.to(spectatorId).emit("gameEnd", result);
+  });
+
+  resetGame();
+}
+
 // Inizia il gioco assegnando simboli e turni ai giocatori
 function startGame(player1, player2) {
   // Il giocatore con X inizia per primo
   const [firstPlayer, secondPlayer] =
     player1.symbol === "X" ? [player1, player2] : [player2, player1];
 
-  game.player1 = firstPlayer;
-  game.player2 = secondPlayer;
-  game.currentPlayer = firstPlayer;
-  
+  game = {
+    player1: firstPlayer,
+    player2: secondPlayer,
+    board: Array(3)
+      .fill("")
+      .map(() => Array(3).fill("")),
+    currentPlayer: firstPlayer,
+    gameOver: false,
+    winner: null,
+    symbols: {
+      player1: firstPlayer.symbol,
+      player2: secondPlayer.symbol,
+    },
+  };
+
   // Invia messaggi ai giocatori per informarli dell'inizio della partita
   io.to(firstPlayer.id).emit("gameStart", {
     gameId: game.id,
@@ -225,33 +251,10 @@ io.on("connection", (socket) => {
         const winnerInfo = checkWinner(game.board);
         if (winnerInfo) {
           const { winner, line } = winnerInfo;
-          game.gameOver = true;
-
-            io.to(game.player1.id).emit("gameOver", {
-              winner:
-                winner === game.symbols.player1 ? "hai vinto" : "hai perso",
-              line,
-            });
-            io.to(game.player2.id).emit("gameOver", {
-              winner:
-                winner === game.symbols.player2 ? "hai vinto" : "hai perso",
-              line,
-            });
-            spectatorQueue.forEach((spectatorId) => {
-              io.to(spectatorId).emit("gameOver", { winner: winner, line });
-            });
-          
-
-          resetGame();
+          endGame(winner, line);
         } else if (isDraw(game.board)) {
           // Controlla se la partita è finita in pareggio
-          game.gameOver = true;
-          io.to(game.player1.id).emit("gameOver", { winner: "parità" });
-          io.to(game.player2.id).emit("gameOver", { winner: "parità" });
-          spectatorQueue.forEach((spectatorId) => {
-            io.to(spectatorId).emit("gameOver", { winner: "parità" });
-          });
-          resetGame();
+          endGame("parità");
         } else {
           // Cambia il turno del giocatore
           game.currentPlayer =
