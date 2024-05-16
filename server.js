@@ -279,10 +279,10 @@ io.on("connection", (socket) => {
       // Verifica se il client era un giocatore nella partita
       if (game.player1 && game.player1.id === socket.id) {
         io.to(game.player2.id).emit("gameAborted");
-       // resetGame();
+        //resetGame();
       } else if (game.player2 && game.player2.id === socket.id) {
         io.to(game.player1.id).emit("gameAborted");
-       // resetGame();
+        //resetGame();
       }
     }
   });
