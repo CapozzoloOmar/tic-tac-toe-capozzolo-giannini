@@ -107,17 +107,6 @@ function updateGame() {
   }
 }
 
-// Resetta la partita e inizia una nuova partita se ci sono spettatori in coda
-//function resetGame() {
-  //game = null;
-  // Inizia una nuova partita con i primi due spettatori in coda, se presenti
-  //if (spectatorQueue.length >= 2) {
-   // const nextPlayer1 = io.sockets.sockets.get(spectatorQueue.shift());
-    //const nextPlayer2 = io.sockets.sockets.get(spectatorQueue.shift());
-    //startGame(nextPlayer1, nextPlayer2);
-  //}
-//}
-
 // Funzione per gestire la fine della partita
 function endGame(winner, line = null) {
   game.gameOver = true;
@@ -130,7 +119,23 @@ function endGame(winner, line = null) {
     io.to(spectatorId).emit("gameEnd", result);
   });
 
-  //resetGame();
+  // Conto alla rovescia
+  let countdown = 5;
+  const countdownInterval = setInterval(() => {
+    // Invia il countdown ai giocatori e agli spettatori
+    io.to(game.player1.id).emit("countdown", countdown);
+    io.to(game.player2.id).emit("countdown", countdown);
+    spectatorQueue.forEach((spectatorId) => {
+      io.to(spectatorId).emit("countdown", countdown);
+    });
+    countdown--;
+
+    // Se il countdown è terminato, riavvia la partita
+    if (countdown < 0) {
+      clearInterval(countdownInterval);
+      startGame(game.player1, game.player2);
+    }
+  }, 1000);
 }
 
 // Inizia il gioco assegnando simboli e turni ai giocatori
