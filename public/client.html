@@ -49,7 +49,7 @@
     <h1>Tic-Tac-Toe</h1>
     <div id="scoreboard"></div>
     <div id="gameBoard"></div>
-    <button id="restartButton" onclick="restartGame()">Restart Game</button>
+     <button id="restartButton" onclick="restartGame()">Restart Game</button> 
 
     <script>
         const socket = io("https://tic-tac-toe-capozzolo-giannini.glitch.me");
@@ -128,8 +128,8 @@
             if (result.winner === 'parità') {
                 alert('Parità!');
             } else {
-                alert(`${result.winner} ha vinto la partita!`);
-                if (yourSymbol === 'X') {
+                alert(`${result.winner}!`);
+                if (result.winner === yourSymbol) {
                     player1Score++;
                 } else {
                     player2Score++;
@@ -137,7 +137,7 @@
                 updateScoreboard();
                 roundsPlayed++;
                 if (player1Score === 3 || player2Score === 3) {
-                    alert(`Partita finita! ${result.winner} ha vinto il gioco!`);
+                    alert(`Game over! Player ${result.winner} wins!`);
                     restartButton.style.display = 'none';
                 } else {
                     restartButton.style.display = 'block';
@@ -154,12 +154,14 @@
         }
 
         function updateScoreboard() {
-            scoreboard.textContent = `Player X: ${player1Score} - Player O: ${player2Score}`;
+            scoreboard.textContent = `Player 1: ${player1Score} - Player 2: ${player2Score}`;
         }
 
         function restartGame() {
             socket.emit('restartGame');
         }
+
+        window.onload = setUsername;
 
         socket.on('gameStart', ({ gameId: id, yourSymbol, opponentSymbol, currentPlayer }) => {
             gameId = id;
