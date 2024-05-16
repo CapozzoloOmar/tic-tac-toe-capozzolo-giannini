@@ -107,17 +107,6 @@ function updateGame() {
   }
 }
 
-// Resetta la partita e inizia una nuova partita se ci sono spettatori in coda
-//function resetGame() {
-  //game = null;
-  // Inizia una nuova partita con i primi due spettatori in coda, se presenti
-  //if (spectatorQueue.length >= 2) {
-   // const nextPlayer1 = io.sockets.sockets.get(spectatorQueue.shift());
-    //const nextPlayer2 = io.sockets.sockets.get(spectatorQueue.shift());
-    //startGame(nextPlayer1, nextPlayer2);
-  //}
-//}
-
 // Funzione per gestire la fine della partita
 function endGame(winner, line = null) {
   game.gameOver = true;
@@ -169,6 +158,26 @@ function startGame(player1, player2) {
   });
 
   // Aggiorna la partita
+  updateGame();
+}
+
+// Resetta la partita e inizia una nuova partita se ci sono spettatori in coda
+function resetGame() {
+  // Non resettare i giocatori, ma solo il tabellone e lo stato della partita
+  game.board = Array(3)
+    .fill("")
+    .map(() => Array(3).fill(""));
+  game.gameOver = false;
+  game.winner = null;
+
+  // Invia messaggi ai giocatori per informarli dell'inizio della nuova partita
+  io.to(game.player1.id).emit("gameRestart");
+  io.to(game.player2.id).emit("gameRestart");
+  spectatorQueue.forEach((spectatorId) => {
+    io.to(spectatorId).emit("gameRestart");
+  });
+
+  // Avvia la nuova partita
   updateGame();
 }
 

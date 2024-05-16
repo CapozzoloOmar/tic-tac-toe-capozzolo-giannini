@@ -128,8 +128,8 @@
             if (result.winner === 'parità') {
                 alert('Parità!');
             } else {
-                alert(`${result.winner}!`);
-                if (result.winner === yourSymbol) {
+                alert(`${result.winner} ha vinto la partita!`);
+                if (yourSymbol === 'X') {
                     player1Score++;
                 } else {
                     player2Score++;
@@ -137,7 +137,7 @@
                 updateScoreboard();
                 roundsPlayed++;
                 if (player1Score === 3 || player2Score === 3) {
-                    alert(`Game over! Player ${result.winner} wins!`);
+                    alert(`Partita finita! ${result.winner} ha vinto il gioco!`);
                     restartButton.style.display = 'none';
                 } else {
                     restartButton.style.display = 'block';
@@ -154,7 +154,7 @@
         }
 
         function updateScoreboard() {
-            scoreboard.textContent = `Player 1: ${player1Score} - Player 2: ${player2Score}`;
+            scoreboard.textContent = `Player X: ${player1Score} - Player O: ${player2Score}`;
         }
 
         function restartGame() {
