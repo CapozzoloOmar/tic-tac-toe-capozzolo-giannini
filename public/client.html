@@ -161,8 +161,6 @@
             socket.emit('restartGame');
         }
 
-        window.onload = setUsername;
-
         socket.on('gameStart', ({ gameId: id, yourSymbol, opponentSymbol, currentPlayer }) => {
             gameId = id;
             yourSymbol = yourSymbol;
