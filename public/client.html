@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -34,10 +35,6 @@
         .your-turn {
             background-color: lightgreen; /* Sfondo verde quando è il turno del giocatore */
         }
-
-        #scoreboard {
-            margin-top: 20px;
-        }
     </style>
 </head>
 
@@ -45,18 +42,12 @@
     <h1>Tic-Tac-Toe</h1>
     <p>Username: <span id="usernameDisplay"></span></p>
     <div id="gameBoard"></div>
-    <div id="scoreboard"></div>
-    <button id="restartButton" style="display: none;">Restart Game</button>
 
     <script>
         const socket = io("https://tic-tac-toe-capozzolo-giannini.glitch.me");
         const gameBoard = document.getElementById('gameBoard');
         const usernameDisplay = document.getElementById('usernameDisplay');
-        const scoreboard = document.getElementById('scoreboard');
-        const restartButton = document.getElementById('restartButton');
         let username, gameId, yourSymbol, yourTurn = false;
-        let player1Score = 0;
-        let player2Score = 0;
 
         function setUsername() {
             const username = prompt('Enter your username:');
@@ -127,16 +118,6 @@
                 alert('Parità!');
             } else {
                 alert(`${result.winner}!`);
-                if (result.winner === yourSymbol) {
-                    player1Score++;
-                } else {
-                    player2Score++;
-                }
-                updateScoreboard();
-                if (player1Score === 3 || player2Score === 3) {
-                    alert(`Game over! Player ${result.winner} wins!`);
-                    restartButton.style.display = 'none';
-                }
             }
 
             // Evidenzia la combinazione vincente se esiste
@@ -148,19 +129,14 @@
             //setUsername();
         }
 
-        function updateScoreboard() {
-            scoreboard.textContent = `Player 1: ${player1Score} - Player 2: ${player2Score}`;
-        }
-
         window.onload = setUsername;
 
         socket.on('gameStart', ({ gameId: id, yourSymbol, opponentSymbol, currentPlayer }) => {
             gameId = id;
             yourSymbol = yourSymbol;
             createGameBoard();
-            updateScoreboard();
             alert(`Game started! You are playing as ${yourSymbol}. Your opponent is playing as ${opponentSymbol}. Current player: ${currentPlayer}.`);
-        });
+        });\ 
 
         socket.on('updateBoard', ({ board, currentPlayer, yourTurn: turn }) => {
             updateGameBoard(board);
@@ -176,10 +152,6 @@
 
         socket.on('waitingForPlayer', () => {
             alert('Waiting for an opponent to join the game...');
-        });
-
-        restartButton.addEventListener('click', () => {
-            socket.emit('restartGame');
         });
     </script>
 </body>
