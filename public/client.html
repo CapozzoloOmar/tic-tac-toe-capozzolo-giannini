@@ -194,6 +194,10 @@
         socket.on('waitingForPlayer', () => {
             alert('Waiting for an opponent to join the game...');
         });
+         socket.on('symbolUnavailable', (symbol) => {
+            alert(`The symbol ${symbol} is already taken. Please choose the other symbol.`);
+            chooseSymbol(username); // Chiede nuovamente il simbolo
+        });
     </script>
 </body>
 
