@@ -49,7 +49,7 @@
     <h1>Tic-Tac-Toe</h1>
     <div id="scoreboard"></div>
     <div id="gameBoard"></div>
-<!--     <button id="restartButton" onclick="restartGame()">Restart Game</button> -->
+    <!-- <button id="restartButton" onclick="restartGame()">Restart Game</button> -->
 
     <script>
         const socket = io("https://tic-tac-toe-capozzolo-giannini.glitch.me");
@@ -57,8 +57,8 @@
         const scoreboard = document.getElementById('scoreboard');
         const restartButton = document.getElementById('restartButton');
         let username, gameId, yourSymbol, yourTurn = false;
-        let player1Score = 0;
-        let player2Score = 0;
+        let playerXScore = 0;
+        let playerOScore = 0;
         let roundsPlayed = 0;
 
         function setUsername() {
@@ -128,15 +128,23 @@
             if (result.winner === 'parità') {
                 alert('Parità!');
             } else {
-                alert(`${result.winner}!`);
+                alert(`${result.winner} ha vinto!`);
                 if (result.winner === yourSymbol) {
-                    player1Score++;
+                    if (yourSymbol === 'X') {
+                        playerXScore++;
+                    } else {
+                        playerOScore++;
+                    }
                 } else {
-                    player2Score++;
+                    if (yourSymbol === 'X') {
+                        playerOScore++;
+                    } else {
+                        playerXScore++;
+                    }
                 }
                 updateScoreboard();
                 roundsPlayed++;
-                if (player1Score === 3 || player2Score === 3) {
+                if (playerXScore === 3 || playerOScore === 3) {
                     alert(`Game over! Player ${result.winner} wins!`);
                     restartButton.style.display = 'none';
                 } else {
@@ -150,11 +158,11 @@
             }
 
             alert('La partita è finita. Effettua nuovamente l\'accesso per iniziare una nuova partita.');
-            //setUsername();
+            // setUsername();
         }
 
         function updateScoreboard() {
-            scoreboard.textContent = `Player 1: ${player1Score} - Player 2: ${player2Score}`;
+            scoreboard.textContent = `Player X: ${playerXScore} - Player O: ${playerOScore}`;
         }
 
         // function restartGame() {
@@ -163,9 +171,9 @@
 
         window.onload = setUsername;
 
-        socket.on('gameStart', ({ gameId: id, yourSymbol, opponentSymbol, currentPlayer }) => {
+        socket.on('gameStart', ({ gameId: id, yourSymbol: symbol, opponentSymbol, currentPlayer }) => {
             gameId = id;
-            yourSymbol = yourSymbol;
+            yourSymbol = symbol;
             createGameBoard();
             updateScoreboard();
             alert(`Game started! You are playing as ${yourSymbol}. Your opponent is playing as ${opponentSymbol}. Current player: ${currentPlayer}.`);
